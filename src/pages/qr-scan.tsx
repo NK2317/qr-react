@@ -1,11 +1,24 @@
-import { useState } from "react";
-import { QrReader } from "react-qr-reader";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "../components/card";
+import { QrScanner } from "../components/scanner";
 
 export default function QRScan() {
   const navigate = useNavigate();
   const [data, setData] = useState('No result');
+  const [deviceId, setDeviceId] = useState("");
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+
+  const getFrontalMediaDevice = async () => {
+    if (typeof navigator !== "undefined") {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const validDevices = devices.filter(d => Boolean(d.deviceId) && d.kind === "videoinput");
+      setDevices(validDevices);
+    }
+  };
+
+  useEffect(() => {
+    getFrontalMediaDevice();
+  }, []);
 
   return (
     <div className="grid h-screen place-items-center">
@@ -16,19 +29,17 @@ export default function QRScan() {
         >
           {`< Go back`}
         </span>
-        <QrReader
-          constraints={{}}
-          onResult={(result, error) => {
-            if (result) {
-              setData(result.getText());
-            }
-
-            if (error) {
-              console.info(error);
-            }
-          }}
-          containerStyle={{ width: '300px' }}
-          videoContainerStyle={{ width: "300px" }}
+        <button onClick={() => getFrontalMediaDevice()}>Refresh list</button>
+        <select onChange={(e) => setDeviceId(e.target.value)}>
+          <option value="">Seleccionar dispositivo de video</option>
+          {devices?.map((d) => (
+            <option value={d.deviceId}>{d.label}</option>
+          ))}
+        </select>
+        <QrScanner
+          onDecode={(result) => setData(result.toString())}
+          onError={(error) => console.log(error?.message)}
+          deviceId={deviceId}
         />
         <a href={data} className="text-extrabold text-md">{data}</a>
       </div>
